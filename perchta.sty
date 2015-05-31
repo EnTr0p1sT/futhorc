@@ -1,0 +1,123 @@
+% This file is made available under the terms of the LaTeX Project Public licence, v1.3 or greater
+% The full licence can be found at http://www.latex-project.org/lppl.txt 
+% View the README file for full copyright and licence details
+% Or for further information, visit worldwidewyrd.net/holdaperchta
+\ProvidesPackage{perchta}
+\RequirePackage{listings}
+\RequirePackage{etoolbox}
+\RequirePackage{xstring}
+\RequirePackage{ifthen}
+\RequirePackage{calc}
+\newcounter{@prcht@lastfinish}
+\newcounter{@prcht@tempcount}
+
+\def\@prcht@perchtrans#1{%
+  \xappto\@prcht@transsheds{#1,}
+  \setcounter{@prcht@tempcount}{\value{lstnumber} - \value{@prcht@lastfinish}}
+  \expandafter\xappto\csname \shedname \endcsname{\arabic{@prcht@tempcount},#1,}\relax
+  \IfSubStr{\@prcht@workedsheds}{#1}{%
+    \StrBehind{\@prcht@workedsheds}{#1:}[\@prcht@lastfinish]
+    \StrBetween{\@prcht@lastfinish}{;}{,}[\@prcht@lastfinish]
+    \setcounter{lstnumber}{\@prcht@lastfinish-1}
+    \setcounter{@prcht@lastfinish}{\@prcht@lastfinish}
+  }{\setcounter{lstnumber}{-1}}
+}
+\def\perchtrans#1{%
+  #1\footnote{C/shed \ref{#1}, pg \pageref{#1}}\par
+  \@prcht@perchtrans{#1}
+}
+\def\@prcht@remapext{%
+  \@for\@prcht@shed:=\@prcht@allsheds\do{%
+    \StrBehind{\@prcht@shed}{>>}[\@prcht@shedext]
+    \ifthenelse{\equal{\@prcht@shedext}{}}{}{%
+      \PackageWarning{Perchta}{It looks like \@prcht@shed\  is a continuation; this may not be what you want...}
+      \StrBetween{\@prcht@shed}{<<}{>>}[\@prcht@shedname]
+      \expandafter\xappto\csname <<\@prcht@shedname >>\endcsname{,\@prcht@shed}
+    }
+  }
+}
+\def\@prcht@findmin{%
+  \@for\@prcht@curshed:=\@prcht@allsheds\do{%
+    \StrBefore{\@prcht@curshed}{>>}[\@prcht@intermediate]
+    \IfSubStr{\@prcht@transsheds}{\@prcht@intermediate>>}{}{%
+      \PackageWarning{Perchta}{Minimal codeshed found: \@prcht@curshed}
+      \xappto\@prcht@minsheds{\@prcht@curshed ,}
+    }
+  }
+}
+\newcounter{@prcht@ticker}
+\def\@prcht@pushshed{\xpreto{\@prcht@shedstack}{\@prcht@curshed:\arabic{@prcht@ticker}!!!}}
+
+\def\@prcht@popshed{\StrCut{\@prcht@shedstack}{!!!}\@prcht@popped\@prcht@shedstack
+\xpreto{\@prcht@shedmap}{\@prcht@popped;\arabic{@prcht@ticker},}}
+\def\@prcht@expandshed{%
+  \ifthenelse{\equal{\@prcht@curshed}{}}{}{%
+    \ifcsdef{\@prcht@curshed}{%
+      \edef\@prcht@working{\csname \@prcht@curshed \endcsname}
+      \@for\@prcht@blob:=\@prcht@working\do{%
+        \ifcsdef{\@prcht@blob}{%
+          \def\@prcht@curshed{\@prcht@blob}
+          \@prcht@pushshed
+          \@prcht@expandshed}{\IfInteger{\@prcht@blob}{%
+          \addtocounter{@prcht@ticker}{\@prcht@blob}}{%
+            \PackageWarning{Perchta}{Codesheds not defined in \@prcht@blob; your numbering will be off.}}}
+      }
+    }{}
+   }
+  \@prcht@popshed
+}
+\def\@prcht@expandminsheds{
+\@for\@prcht@curshed:=\@prcht@minsheds\do{%
+\setcounter{@prcht@ticker}{0}
+\@prcht@pushshed
+\@prcht@expandshed\par
+\StrBefore{\@prcht@popped}{:}[\@prcht@sourcefile]
+\PackageWarning{Perchta}{Finished pass...\arabic{@prcht@ticker} lines in \@prcht@sourcefile}}
+}
+\AtEndDocument{
+  \@prcht@remapext
+  \@prcht@findmin
+  \@prcht@expandminsheds
+  \newwrite\@prcht@shedfile
+    \openout\@prcht@shedfile=\jobname.codesheds
+      \write\@prcht@shedfile{\@prcht@shedmap}
+    \closeout\@prcht@shedfile
+}
+\AtBeginDocument{
+  \IfFileExists{\jobname.codesheds}{%
+    \newread\@prcht@shedfile
+      \openin\@prcht@shedfile=\jobname.codesheds
+        \read\@prcht@shedfile to \@prcht@workedsheds
+      \closein\@prcht@shedfile}
+  {\def\@prcht@workedsheds{}}
+}
+\lstnewenvironment{codeshed}[1]{%
+  \lstset{%
+    firstnumber=last,
+    emptylines=1,
+    label=#1,
+    name=#1,
+    caption=#1,
+    numberblanklines=true,
+    escapeinside=££%£\pounds\pounds£
+  } 
+  \xappto\@prcht@allsheds{#1,}
+  \expandafter\newcommand\csname #1 \endcsname{}
+  \def\shedname{#1}
+  \IfSubStr{\@prcht@workedsheds}{#1}{%
+    \StrBehind{\@prcht@workedsheds}{#1:}[\@prcht@shedstart]
+    \StrBefore{\@prcht@shedstart}{;}[\@prcht@shedstart]
+    \setcounter{@prcht@lastfinish}{\@prcht@shedstart}
+    \setcounter{lstnumber}{\@prcht@shedstart}
+  }{\setcounter{lstnumber}{0}}
+}{%
+  \setcounter{@prcht@tempcount}{\value{lstnumber} - \value{@prcht@lastfinish}}
+  \expandafter\xappto\csname \shedname \endcsname{\arabic{@prcht@tempcount}} 
+}
+\renewcommand{\lstlistingname}{Codeshed}
+\renewcommand{\lstlistlistingname}{Table of Codesheds}
+\lstnewenvironment{pseudocode}[1]{%
+  \lstset{%
+    numbers=none,
+    language=#1
+  }}{}

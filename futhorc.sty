@@ -1,0 +1,137 @@
+\ProvidesPackage{futhorc}
+
+%%%%%Packages used generically across all classes%%%%%
+\usepackage{euler}
+\usepackage{fontspec}
+%\usepackage{sectsty}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage[style=verbose-trad1, ibidpage=true, citepages=omit]{biblatex}
+%\usepackage[style=alphabetic]{biblatex}
+\usepackage[hang, flushmargin]{footmisc}
+\usepackage{multicol}
+\usepackage[font=small, labelfont=bf]{caption}
+\usepackage{colortbl}
+\usepackage{endnotes}
+\usepackage{graphicx}
+\usepackage{eso-pic}
+\usepackage{url}
+\usepackage{setspace}
+\usepackage{zref-savepos} %This and next three for marginalia
+\usepackage{calc}
+\usepackage{etoolbox}
+\usepackage{marginnote}
+\usepackage{ragged2e}
+\usepackage{leading}
+%\usepackage{mathspec}
+\usepackage[sc]{titlesec}
+%\usepackage{amsmath}
+
+%%%%Initialising constants across templates%%%%%
+\newcommand{\accentcolour}[1]{\def \@accentcolour {#1}}
+\newcommand{\complementarycolour}[1]{\def \@complementarycolour {#1}}
+\newcommand{\contrastcolour}[1]{\def \@contrastcolour {#1}}
+\newcommand{\firstname}[1]{\def \@firstname {#1}}
+\newcommand{\middlename}[1]{\def \@middlename {#1}}
+\newcommand{\surname}[1]{\def \@surname {#1}}
+\newcommand{\middleinit}[1]{\def \@middleinit {#1}}
+\newcommand{\initinit}[1]{\def \@initinit {#1}}
+\newcommand{\surinit}[1]{\def \@surinit {#1}}
+%\newcommand{\houseaddr}[1]{\def \@houseaddr {#1}}
+%\newcommand{\townaddr}[1]{\def \@townaddr {#1}}
+%\newcommand{\countyaddr}[1]{\def \@countyaddr {#1}}
+%\newcommand{\postcodeaddr}[1]{\def \@postcodeaddr {#1}}
+%\newcommand{\homephone}[1]{\def \@homephone {#1}}
+%\newcommand{\workphone}[1]{\def \@workphone {#1}}
+%\newcommand{\mobilephone}[1]{\def \@mobilephone {#1}}
+%\newcommand{\persemail}[1]{\def \@persemail {#1}}
+%\newcommand{\workemail}[1]{\def \@workemail {#1}}
+
+\InputIfFileExists{personal.cfg}{}{} %draw user defined fields from config.tex
+
+%%%%%Font setup%%%%%
+\defaultfontfeatures{Mapping=tex-text} %ensure ligatures etc load
+\setromanfont[Numbers=OldStyle, UprightFeatures={SmallCapsFeatures={Letters=SmallCaps, LetterSpace=4}}]{\rmfontname}
+\setsansfont[Numbers=OldStyle, UprightFeatures={SmallCapsFeatures={Letters=SmallCaps, LetterSpace=4}}, BoldFeatures={SmallCapsFeatures={Letters=SmallCaps, LetterSpace = 6}}, BoldFont={* Semibold}, ItalicFont={GilliusADF-Italic}, ItalicFeatures={SmallCapsFeatures={Letters=SmallCaps, LetterSpace = 5}}]{\sffontname}
+
+\setmonofont{\monofontname}
+\urlstyle{tt} %monospace urls
+\defaultfontfeatures{Mapping=tex-text} %ensure ligatures etc load
+%\setmathsfont(Digits){euler}
+%\setmathsfont(Latin){Hypatia Sans Pro}
+%\setmathrm{Hypatia Sans Pro}
+\newcommand{\intt}[1]{{\ttfamily \footnotesize #1}}
+%%%%%Define accent colours%%%%%
+\definecolor{acccol}{RGB}{\@accentcolour}
+\definecolor{compcol}{RGB}{\@complementarycolour}
+\definecolor{contcol}{RGB}{\@contrastcolour}
+
+%%%%%Section/heading formatting%%%%%
+%\allsectionsfont{\color{acccol} \sffamily \scshape}
+%\titleformat{\section}{\color{acccol} \sffamily \scshape \large}{}{0pt}{}{%
+%\smash{\makebox[0pt][\hspace{\marginparsep}]{\color{acccol} \sffamily \scshape \large A\thesection}}
+%}
+
+%\titlespacing*{\section}{0pt}{3ex}{2ex}
+%%%%%Custom commands%%%%%
+
+%These two complementary commands force a paragraph to fully justify its last line
+%Suggested by barbara beeton on tex.sx
+\newcommand{\startsquarepar}{\par\begingroup \parfillskip 0pt \relax}
+\newcommand{\stopsquarepar}{\par\endgroup}
+
+%%%%Include tombstone glyph
+\newcommand{\tombstone}{%
+\includegraphics[height=1.5ex]{tombstone.eps}
+}
+
+%%%%%Marginalia commands
+%Indebted to a solution by Robin Fairbairns found on comp.text.tex
+
+%Pivot holds the length that is used as a threshold to determine
+% whether the position is on the left of the page or on the right.
+\newlength{\pivot}
+
+% This must be called at the beginning of the text to determine the
+% x-position at which the textblock begins.
+\newcommand{\setpivot}{%
+\setlength{\pivot}{1in}% default offset
+\addtolength{\pivot}{\oddsidemargin}%
+\addtolength{\pivot}{.5\textwidth}%
+}
+
+% \leftrightcol executes the first parameter if called in a left
+% and the second parameter if called in a right column.
+\newcounter{currentpos}
+\DeclareRobustCommand{\leftrightcol}[2]{\zsavepos{\arabic{currentpos}}%
+%zposx: \zposx{\arabic{currentpos}}sp pivot: \the\pivot
+\ifdimcomp{\zposx{\arabic{currentpos}}sp}{>}{105mm}{#1}{#2}
+%\protect\ifthenelse{\protect\lengthtest{\zposx{\arabic{currentpos}}sp<\pivot}}{#1}
+%{#2}%
+\stepcounter{currentpos}%
+}
+
+% \outermagin puts the marginnote on the left if called in the left
+% column, and on the right if called in the right column.
+\newcommand{\flag}[1]{%
+%\leftrightcol{\marginnote{#1}}{{\reversemarginpar\marginnote{#1}}}
+\leftrightcol{\marginnote{\parbox{\marginparwidth}{\formatrightmarginnote{#1}}}}{{\reversemarginpar\marginnote{\formatleftmarginnote{#1}}}}
+}
+%Format the margin note
+\newcommand{\formatrightmarginnote}[1]{%
+\medskip \parbox{\marginparwidth}{\raggedright \footnotesize{\textsf{\color{acccol}#1}}}
+}
+\newcommand{\formatleftmarginnote}[1]{%
+\medskip \parbox{\marginparwidth}{\RaggedLeft \footnotesize{\textsf{\color{acccol}#1}}}
+}
+
+%Put a picture in the background of a page
+\newcommand\BackgroundPic[1]{%
+\put(0,0){%
+\parbox[b][210mm]{297mm}{%
+\vfill
+\centering
+\includegraphics{#1}
+\vfill
+}}}
+
